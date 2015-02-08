@@ -933,6 +933,23 @@ _copyLimit(const Limit *from)
 
 	return newnode;
 }
+static Ignore *
+_copyIgnore(const Ignore *from)
+{
+	Ignore	   *newnode = makeNode(Ignore);
+
+	/*
+	 * copy node superclass fields
+	 */
+	CopyPlanFields((const Plan *) from, (Plan *) newnode);
+
+	/*
+	 * copy remainder of node
+	 */
+	COPY_NODE_FIELD(ignoreCount);
+
+	return newnode;
+}
 
 /*
  * _copyNestLoopParam
@@ -2431,6 +2448,7 @@ _copyQuery(const Query *from)
 	COPY_NODE_FIELD(sortClause);
 	COPY_NODE_FIELD(limitOffset);
 	COPY_NODE_FIELD(limitCount);
+	COPY_NODE_FIELD(ignoreCount);
 	COPY_NODE_FIELD(rowMarks);
 	COPY_NODE_FIELD(setOperations);
 	COPY_NODE_FIELD(constraintDeps);
@@ -2499,6 +2517,7 @@ _copySelectStmt(const SelectStmt *from)
 	COPY_NODE_FIELD(sortClause);
 	COPY_NODE_FIELD(limitOffset);
 	COPY_NODE_FIELD(limitCount);
+	COPY_NODE_FIELD(ignoreCount);
 	COPY_NODE_FIELD(lockingClause);
 	COPY_SCALAR_FIELD(op);
 	COPY_SCALAR_FIELD(all);
@@ -3791,6 +3810,9 @@ copyObject(const void *from)
 			break;
 		case T_Result:
 			retval = _copyResult(from);
+			break;
+		case T_Ignore:
+			retval = _copyIgnore(from);
 			break;
 		case T_ModifyTable:
 			retval = _copyModifyTable(from);

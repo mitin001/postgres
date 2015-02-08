@@ -506,6 +506,23 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 					fix_scan_expr(root, splan->limitCount, rtoffset);
 			}
 			break;
+		case T_Ignore:
+			{
+				Ignore	   *splan = (Ignore *) plan;
+
+				/*
+				 * Like the plan types above, Ignore doesn't evaluate its tlist
+				 * or quals.  It does have live expression for ignoreCount,
+				 * however; and it cannot contain subplan variable refs, so
+				 * fix_scan_expr works for it.
+				 */
+				set_dummy_tlist_references(plan, rtoffset);
+				Assert(splan->plan.qual == NIL);
+
+				splan->ignoreCount =
+					fix_scan_expr(root, splan->ignoreCount, rtoffset);
+			}
+			break;
 		case T_Agg:
 		case T_Group:
 			set_upper_references(root, plan, rtoffset);

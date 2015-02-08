@@ -747,6 +747,12 @@ typedef struct Limit
 	Node	   *limitCount;		/* COUNT parameter, or NULL if none */
 } Limit;
 
+typedef struct Ignore
+{
+	Plan		plan;
+	Node	   *ignoreCount;		/* COUNT parameter, or NULL if none */
+} Ignore;
+
 
 /*
  * RowMarkType -

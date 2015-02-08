@@ -142,6 +142,7 @@ typedef struct Query
 
 	Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
 	Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
+	Node	   *ignoreCount;	/* # of result tuples to return (int8 expr) */
 
 	List	   *rowMarks;		/* a list of RowMarkClause's */
 
@@ -1035,6 +1036,7 @@ typedef struct SelectStmt
 	List	   *sortClause;		/* sort clause (a list of SortBy's) */
 	Node	   *limitOffset;	/* # of result tuples to skip */
 	Node	   *limitCount;		/* # of result tuples to return */
+	Node	   *ignoreCount;		/* # of result tuples to return */
 	List	   *lockingClause;	/* FOR UPDATE (list of LockingClause's) */
 
 	/*

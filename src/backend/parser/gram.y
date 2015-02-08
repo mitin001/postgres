@@ -127,7 +127,7 @@ static List *check_indirection(List *indirection, core_yyscan_t yyscanner);
 static List *extractArgTypes(List *parameters);
 static void insertSelectOptions(SelectStmt *stmt,
 								List *sortClause, List *lockingClause,
-								Node *limitOffset, Node *limitCount,
+								Node *limitOffset, Node *limitCount, Node *ignoreCount,
 								WithClause *withClause,
 								core_yyscan_t yyscanner);
 static Node *makeSetOp(SetOperation op, bool all, Node *larg, Node *rarg);
@@ -313,7 +313,7 @@ static void processCASbits(int cas_bits, int location, const char *constrType,
 				set_clause_list set_clause multiple_set_clause
 				ctext_expr_list ctext_row def_list indirection opt_indirection
 				reloption_list group_clause TriggerFuncArgs select_limit
-				opt_select_limit opclass_item_list opclass_drop_list
+				opt_select_limit select_ignore opt_select_ignore opclass_item_list opclass_drop_list
 				opclass_purpose opt_opfamily transaction_mode_list_or_empty
 				OptTableFuncElementList TableFuncElementList opt_type_modifiers
 				prep_type_clause
@@ -360,7 +360,7 @@ static void processCASbits(int cas_bits, int location, const char *constrType,
 %type <ival>	opt_column event cursor_options opt_hold opt_set_data
 %type <objtype>	reindex_type drop_type comment_type security_label_type
 
-%type <node>	fetch_args limit_clause select_limit_value
+%type <node>	fetch_args limit_clause select_limit_value ignore_clause select_ignore_value
 				offset_clause select_offset_value
 				select_offset_value2 opt_select_fetch_first_value
 %type <ival>	row_or_rows first_or_next
@@ -517,7 +517,7 @@ static void processCASbits(int cas_bits, int location, const char *constrType,
 
 	HANDLER HAVING HEADER_P HOLD HOUR_P
 
-	IDENTITY_P IF_P ILIKE IMMEDIATE IMMUTABLE IMPLICIT_P IN_P
+	IDENTITY_P IF_P IGNORE ILIKE IMMEDIATE IMMUTABLE IMPLICIT_P IN_P
 	INCLUDING INCREMENT INDEX INDEXES INHERIT INHERITS INITIALLY INLINE_P
 	INNER_P INOUT INPUT_P INSENSITIVE INSERT INSTEAD INT_P INTEGER
 	INTERSECT INTERVAL INTO INVOKER IS ISNULL ISOLATION
@@ -8734,22 +8734,30 @@ select_no_parens:
 			| select_clause sort_clause
 				{
 					insertSelectOptions((SelectStmt *) $1, $2, NIL,
-										NULL, NULL, NULL,
+										NULL, NULL, NULL, NULL,
 										yyscanner);
 					$$ = $1;
 				}
-			| select_clause opt_sort_clause for_locking_clause opt_select_limit
+			| select_clause opt_sort_clause for_locking_clause opt_select_limit opt_select_ignore
 				{
 					insertSelectOptions((SelectStmt *) $1, $2, $3,
-										list_nth($4, 0), list_nth($4, 1),
+										list_nth($4, 0), list_nth($4, 1), $5,
 										NULL,
 										yyscanner);
 					$$ = $1;
 				}
-			| select_clause opt_sort_clause select_limit opt_for_locking_clause
+			| select_clause opt_sort_clause select_limit opt_select_ignore opt_for_locking_clause
+				{
+					insertSelectOptions((SelectStmt *) $1, $2, $5,
+										list_nth($3, 0), list_nth($3, 1), $4,
+										NULL,
+										yyscanner);
+					$$ = $1;
+				}
+			| select_clause opt_sort_clause select_ignore opt_for_locking_clause
 				{
 					insertSelectOptions((SelectStmt *) $1, $2, $4,
-										list_nth($3, 0), list_nth($3, 1),
+										NULL, NULL, $3,
 										NULL,
 										yyscanner);
 					$$ = $1;
@@ -8757,7 +8765,7 @@ select_no_parens:
 			| with_clause select_clause
 				{
 					insertSelectOptions((SelectStmt *) $2, NULL, NIL,
-										NULL, NULL,
+										NULL, NULL, NULL,
 										$1,
 										yyscanner);
 					$$ = $2;
@@ -8765,23 +8773,23 @@ select_no_parens:
 			| with_clause select_clause sort_clause
 				{
 					insertSelectOptions((SelectStmt *) $2, $3, NIL,
-										NULL, NULL,
+										NULL, NULL, NULL,
 										$1,
 										yyscanner);
 					$$ = $2;
 				}
-			| with_clause select_clause opt_sort_clause for_locking_clause opt_select_limit
+			| with_clause select_clause opt_sort_clause for_locking_clause opt_select_limit opt_select_ignore
 				{
 					insertSelectOptions((SelectStmt *) $2, $3, $4,
-										list_nth($5, 0), list_nth($5, 1),
+										list_nth($5, 0), list_nth($5, 1), $6,
 										$1,
 										yyscanner);
 					$$ = $2;
 				}
-			| with_clause select_clause opt_sort_clause select_limit opt_for_locking_clause
+			| with_clause select_clause opt_sort_clause select_limit opt_select_ignore opt_for_locking_clause
 				{
-					insertSelectOptions((SelectStmt *) $2, $3, $5,
-										list_nth($4, 0), list_nth($4, 1),
+					insertSelectOptions((SelectStmt *) $2, $3, $6,
+										list_nth($4, 0), list_nth($4, 1), $5,
 										$1,
 										yyscanner);
 					$$ = $2;
@@ -9046,9 +9054,19 @@ select_limit:
 			| offset_clause						{ $$ = list_make2($1, NULL); }
 		;
 
+
+select_ignore:
+			ignore_clause						{ $$ = $1; }
+		;
+
 opt_select_limit:
 			select_limit						{ $$ = $1; }
 			| /* EMPTY */						{ $$ = list_make2(NULL,NULL); }
+		;
+
+opt_select_ignore:
+			select_ignore						{ $$ = $1; }
+			| /* EMPTY */						{ $$ = NULL; }
 		;
 
 limit_clause:
@@ -9068,6 +9086,11 @@ limit_clause:
 				{ $$ = $3; }
 		;
 
+ignore_clause:
+			IGNORE select_ignore_value
+				{ $$ = $2; }
+		;
+
 offset_clause:
 			OFFSET select_offset_value
 				{ $$ = $2; }
@@ -9083,6 +9106,10 @@ select_limit_value:
 					/* LIMIT ALL is represented as a NULL constant */
 					$$ = makeNullAConst(@1);
 				}
+		;
+
+select_ignore_value:
+			a_expr									{ $$ = $1; }
 		;
 
 select_offset_value:
@@ -12627,6 +12654,7 @@ reserved_keyword:
 			| GRANT
 			| GROUP_P
 			| HAVING
+			| IGNORE
 			| IN_P
 			| INITIALLY
 			| INTERSECT
@@ -12966,7 +12994,7 @@ extractArgTypes(List *parameters)
 static void
 insertSelectOptions(SelectStmt *stmt,
 					List *sortClause, List *lockingClause,
-					Node *limitOffset, Node *limitCount,
+					Node *limitOffset, Node *limitCount, Node *ignoreCount,
 					WithClause *withClause,
 					core_yyscan_t yyscanner)
 {
@@ -13004,6 +13032,15 @@ insertSelectOptions(SelectStmt *stmt,
 					 errmsg("multiple LIMIT clauses not allowed"),
 					 parser_errposition(exprLocation(limitCount))));
 		stmt->limitCount = limitCount;
+	}
+	if (ignoreCount)
+	{
+		if (stmt->ignoreCount)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("multiple IGNORE clauses not allowed"),
+					 parser_errposition(exprLocation(ignoreCount))));
+		stmt->ignoreCount = ignoreCount;
 	}
 	if (withClause)
 	{

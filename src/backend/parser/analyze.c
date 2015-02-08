@@ -430,7 +430,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 	 * VALUES list, or general SELECT input.  We special-case VALUES, both for
 	 * efficiency and so we can handle DEFAULT specifications.
 	 *
-	 * The grammar allows attaching ORDER BY, LIMIT, FOR UPDATE, or WITH to a
+	 * The grammar allows attaching ORDER BY, LIMIT, IGNORE, FOR UPDATE, or WITH to a
 	 * VALUES clause.  If we have any of those, treat it as a general SELECT;
 	 * so it will work, but you can't use DEFAULT items together with those.
 	 */
@@ -438,6 +438,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 									  selectStmt->sortClause != NIL ||
 									  selectStmt->limitOffset != NULL ||
 									  selectStmt->limitCount != NULL ||
+									  selectStmt->ignoreCount != NULL ||
 									  selectStmt->lockingClause != NIL ||
 									  selectStmt->withClause != NULL));
 
@@ -1024,6 +1025,10 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	qry->limitCount = transformLimitClause(pstate, stmt->limitCount,
 										   "LIMIT");
 
+	/* transform IGNORE */
+	qry->ignoreCount = transformLimitClause(pstate, stmt->ignoreCount,
+										   "IGNORE");
+
 	/* transform window clauses after we have seen all window functions */
 	qry->windowClause = transformWindowDefinitions(pstate,
 												   pstate->p_windowdefs,
@@ -1243,6 +1248,8 @@ transformValuesClause(ParseState *pstate, SelectStmt *stmt)
 											"OFFSET");
 	qry->limitCount = transformLimitClause(pstate, stmt->limitCount,
 										   "LIMIT");
+	qry->ignoreCount = transformLimitClause(pstate, stmt->ignoreCount,
+										   "IGNORE");
 
 	if (stmt->lockingClause)
 		ereport(ERROR,
@@ -1321,6 +1328,7 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 	List	   *sortClause;
 	Node	   *limitOffset;
 	Node	   *limitCount;
+	Node	   *ignoreCount;
 	List	   *lockingClause;
 	WithClause *withClause;
 	Node	   *node;
@@ -1367,12 +1375,14 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 	sortClause = stmt->sortClause;
 	limitOffset = stmt->limitOffset;
 	limitCount = stmt->limitCount;
+	ignoreCount = stmt->ignoreCount;
 	lockingClause = stmt->lockingClause;
 	withClause = stmt->withClause;
 
 	stmt->sortClause = NIL;
 	stmt->limitOffset = NULL;
 	stmt->limitCount = NULL;
+	stmt->ignoreCount = NULL;
 	stmt->lockingClause = NIL;
 	stmt->withClause = NULL;
 
@@ -1513,6 +1523,8 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 											"OFFSET");
 	qry->limitCount = transformLimitClause(pstate, limitCount,
 										   "LIMIT");
+	qry->ignoreCount = transformLimitClause(pstate, ignoreCount,
+										   "IGNORE");
 
 	qry->rtable = pstate->p_rtable;
 	qry->jointree = makeFromExpr(pstate->p_joinlist, NULL);
@@ -1588,7 +1600,7 @@ transformSetOperationTree(ParseState *pstate, SelectStmt *stmt,
 	else
 	{
 		Assert(stmt->larg != NULL && stmt->rarg != NULL);
-		if (stmt->sortClause || stmt->limitOffset || stmt->limitCount ||
+		if (stmt->sortClause || stmt->limitOffset || stmt->limitCount || stmt->ignoreCount ||
 			stmt->lockingClause || stmt->withClause)
 			isLeaf = true;
 		else

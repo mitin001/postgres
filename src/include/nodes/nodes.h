@@ -41,6 +41,7 @@ typedef enum NodeTag
 	/*
 	 * TAGS FOR PLAN NODES (plannodes.h)
 	 */
+	T_Ignore = 99,
 	T_Plan = 100,
 	T_Result,
 	T_ModifyTable,
@@ -86,6 +87,7 @@ typedef enum NodeTag
 	 *
 	 * These should correspond one-to-one with Plan node types.
 	 */
+	T_IgnoreState = 199,
 	T_PlanState = 200,
 	T_ResultState,
 	T_ModifyTableState,

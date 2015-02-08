@@ -4491,6 +4491,59 @@ make_limit(Plan *lefttree, Node *limitOffset, Node *limitCount,
 }
 
 /*
+ * Note: count_est are passed in to save having to repeat
+ * work already done to estimate the value of the ignoreCount
+ * expression.  Its value is as returned by preprocess_limit (0 means
+ * "not relevant", -1 means "couldn't estimate").  Keep the code below in sync
+ * with that function!
+ */
+Ignore *
+make_ignore(Plan *lefttree, Node *ignoreCount, int64 count_est)
+{
+	Ignore	   *node = makeNode(Ignore);
+	Plan	   *plan = &node->plan;
+
+	copy_plan_costsize(plan, lefttree);
+
+	/*
+	 * Adjust the output rows count and costs according to the limit.
+	 * This is only a cosmetic issue if we are at top level, but if we are
+	 * building a subquery then it's important to report correct info to the
+	 * outer planner.
+	 *
+	 * When the count couldn't be estimated, use 10% of the
+	 * estimated number of rows emitted from the subplan.
+	 */
+	if (count_est != 0)
+	{
+		double		count_rows;
+
+		if (count_est > 0)
+			count_rows = (double) count_est;
+		else
+			count_rows = clamp_row_est(lefttree->plan_rows * 0.10);
+		if (count_rows > plan->plan_rows)
+			count_rows = plan->plan_rows;
+		if (plan->plan_rows > 0)
+			plan->total_cost = plan->startup_cost +
+				(plan->total_cost - plan->startup_cost)
+				* count_rows / plan->plan_rows;
+		plan->plan_rows = count_rows;
+		if (plan->plan_rows < 1)
+			plan->plan_rows = 1;
+	}
+
+	plan->targetlist = lefttree->targetlist;
+	plan->qual = NIL;
+	plan->lefttree = lefttree;
+	plan->righttree = NULL;
+
+	node->ignoreCount = ignoreCount;
+
+	return node;
+}
+
+/*
  * make_result
  *	  Build a Result plan node
  *
@@ -4618,6 +4671,7 @@ is_projection_capable_plan(Plan *plan)
 		case T_SetOp:
 		case T_LockRows:
 		case T_Limit:
+		case T_Ignore:
 		case T_ModifyTable:
 		case T_Append:
 		case T_MergeAppend:

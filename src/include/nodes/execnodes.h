@@ -1874,4 +1874,15 @@ typedef struct LimitState
 	TupleTableSlot *subSlot;	/* tuple last obtained from subplan */
 } LimitState;
 
+typedef struct IgnoreState
+{
+	PlanState	ps;				/* its first field is NodeTag */
+	ExprState  *ignoreCount;		/* COUNT parameter, or NULL if none */
+	int64		count;			/* current COUNT, if any */
+	bool		noCount;		/* if true, ignore count */
+	LimitStateCond lstate;		/* state machine status, as above */
+	int64		position;		/* 1-based index of last tuple returned */
+	TupleTableSlot *subSlot;	/* tuple last obtained from subplan */
+} IgnoreState;
+
 #endif   /* EXECNODES_H */

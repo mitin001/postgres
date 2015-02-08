@@ -432,6 +432,8 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 											   EXPRKIND_LIMIT);
 	parse->limitCount = preprocess_expression(root, parse->limitCount,
 											  EXPRKIND_LIMIT);
+	parse->ignoreCount = preprocess_expression(root, parse->ignoreCount,
+											  EXPRKIND_LIMIT);
 
 	root->append_rel_list = (List *)
 		preprocess_expression(root, (Node *) root->append_rel_list,
@@ -1781,6 +1783,16 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 										  parse->limitOffset,
 										  parse->limitCount,
 										  offset_est,
+										  count_est);
+	}
+
+	/*
+	 * And then, if there is an IGNORE clause, add the IGNORE node.
+	 */
+	if (parse->ignoreCount)
+	{
+		result_plan = (Plan *) make_ignore(result_plan,
+										  parse->ignoreCount,
 										  count_est);
 	}
 

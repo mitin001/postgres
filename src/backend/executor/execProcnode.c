@@ -91,6 +91,7 @@
 #include "executor/nodeHashjoin.h"
 #include "executor/nodeIndexonlyscan.h"
 #include "executor/nodeIndexscan.h"
+#include "executor/nodeIgnore.h"
 #include "executor/nodeLimit.h"
 #include "executor/nodeLockRows.h"
 #include "executor/nodeMaterial.h"
@@ -145,6 +146,11 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			/*
 			 * control nodes
 			 */
+		case T_Ignore:
+			result = (PlanState *) ExecInitIgnore((Ignore *) node,
+												 estate, eflags);
+			break;
+
 		case T_Result:
 			result = (PlanState *) ExecInitResult((Result *) node,
 												  estate, eflags);
@@ -371,6 +377,10 @@ ExecProcNode(PlanState *node)
 		case T_ResultState:
 			result = ExecResult((ResultState *) node);
 			break;
+
+ 		case T_IgnoreState:
+ 			result = ExecIgnore((IgnoreState *) node);
+ 			break;
 
 		case T_ModifyTableState:
 			result = ExecModifyTable((ModifyTableState *) node);
@@ -601,6 +611,10 @@ ExecEndNode(PlanState *node)
 		case T_ResultState:
 			ExecEndResult((ResultState *) node);
 			break;
+			
+ 		case T_IgnoreState:
+ 			ExecEndIgnore((IgnoreState *) node);
+ 			break;
 
 		case T_ModifyTableState:
 			ExecEndModifyTable((ModifyTableState *) node);
