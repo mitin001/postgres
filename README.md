@@ -1,16 +1,16 @@
-PostgreSQL Database Management System, modified with an addition of the IGNORE operator
+PostgreSQL Database Management System, modified with an addition of the ```IGNORE``` operator
 =======================================================================================
 
 Syntax extension
 ----------------
-Imagine table T contains n tuples. The 'IGNORE a' operation hides the first a tuples in the query:
-'SELECT * FROM T IGNORE a' returns tuples a + 1, a + 2, ..., n.
+Imagine table T contains n tuples. The ```IGNORE a``` operation hides the first a tuples in the query:
+* ```SELECT * FROM T IGNORE a``` returns tuples a + 1, a + 2, ..., n.
 
-The IGNORE operation can be combined with the LIMIT operation in the following ways to produce respective outputs:
-'SELECT * FROM T LIMIT c IGNORE b' returns tuples b + 1, b + 2, ..., c.
-'SELECT * FROM T LIMIT f OFFSET e IGNORE d' returns tuples d + 2, d + 3, ..., f + e.
+The ```IGNORE``` operation can be combined with the ```LIMIT``` operation in the following ways to produce respective outputs:
+* ```SELECT * FROM T LIMIT c IGNORE b``` returns tuples b + 1, b + 2, ..., c.
+* ```SELECT * FROM T LIMIT f OFFSET e IGNORE d``` returns tuples d + 2, d + 3, ..., f + e.
 
-Contents of the original README
+Text of the original README
 -------------------------------
 
 This directory contains the source code distribution of the PostgreSQL
