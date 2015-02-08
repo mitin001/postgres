@@ -14,10 +14,12 @@ Performance
 -----------
 The FIFO buffer replacement policy was found to neither outperform nor underperform the clock sweep replacement policy. Two sets of test cases were provided. They were run 30 times each by both the original and the modified programs. The results are in ```output/<clock|fifo><1|2>.txt``` files, respectively. The averages of times reported in these files are within 10 ms:
 
-clock1.txt | 0.152052.4 s
- fifo1.txt | 0.159859.7 s
-clock2.txt | 0.535094.6 s
- fifo2.txt | 0.530696.3 s
+| file       | average of times reported |
+| -----------|-------------------------- |
+| clock1.txt | 0.152052.4 s              |
+| fifo1.txt  | 0.159859.7 s              |
+| clock2.txt | 0.535094.6 s              |
+| fifo2.txt  | 0.530696.3 s              |
 
 Testing conditions
 ------------------
