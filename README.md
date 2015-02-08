@@ -23,10 +23,11 @@ The FIFO buffer replacement policy was found to neither outperform nor underperf
 
 Testing conditions
 ------------------
-The original command to run psql never had the application to reach the code of buffer replacement policy:
-```<install_path>/bin/psql -h localhost <database_name>```
-I restricted psql to only 128 buffers using the following modified command to run it:
-```<install_path>/bin/psql -B 128 -h localhost <database_name>```
+On my configuration, the original command to run ```psql``` couldn't reach the code of buffer replacement policy:
+* ```<install_path>/bin/psql -h localhost <database_name>```
+
+I restricted ```psql``` to only 128 buffers using the following modified command to run it:
+* ```<install_path>/bin/psql -B 128 -h localhost <database_name>```
 
 Conclusion
 ----------
